@@ -1,0 +1,17 @@
+{
+  "name": "campusos-workspace",
+  "version": "1.0.0",
+  "description": "CampusOS — City University Hub Root Workspace",
+  "private": true,
+  "workspaces": [
+    "backend"
+  ],
+  "scripts": {
+    "dev": "npm --prefix backend run dev",
+    "build": "npm --prefix backend install && npm --prefix backend run build",
+    "vercel-build": "npm --prefix backend install && npm --prefix backend run build",
+    "start": "npm --prefix backend start",
+    "seed": "npm --prefix backend run seed",
+    "test": "npm --prefix backend test"
+  }
+}
