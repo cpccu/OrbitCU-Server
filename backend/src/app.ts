@@ -1,8 +1,10 @@
-import express, { Application, Request, Response, NextFunction } from 'express';
+﻿import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import mongoose from 'mongoose';
 import { env } from './config/env';
+import { connectDatabase } from './config/database';
 import { appRouter } from './routes';
 import { globalErrorHandler } from './middlewares/error.middleware';
 import { globalRateLimiter } from './middlewares/rateLimit.middleware';
@@ -14,6 +16,14 @@ export const createApp = (): Application => {
 
   // Trust reverse proxies (important for rate limiting and IP resolution)
   app.set('trust proxy', 1);
+
+  // Chromium Private Network Access (PNA) header support
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.headers['access-control-request-private-network']) {
+      res.setHeader('Access-Control-Allow-Private-Network', 'true');
+    }
+    next();
+  });
 
   // Security Headers
   app.use(helmet());
@@ -33,7 +43,7 @@ export const createApp = (): Application => {
       },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Access-Control-Request-Private-Network']
     })
   );
 
@@ -60,6 +70,18 @@ export const createApp = (): Application => {
       docs: '/docs/api.md',
       endpoints: '/api'
     });
+  });
+
+  // Ensure DB connection for serverless / cold starts before API execution
+  app.use('/api', async (_req: Request, _res: Response, next: NextFunction) => {
+    try {
+      if (mongoose.connection.readyState !== 1) {
+        await connectDatabase();
+      }
+      next();
+    } catch (err) {
+      next(err);
+    }
   });
 
   // API Routes
